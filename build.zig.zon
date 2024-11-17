@@ -1,0 +1,15 @@
+.{
+    .name = "zvenc",
+    .version = "0.0.0",
+    .dependencies = .{
+        .zsqlite = .{
+            .url = "../zsqlite",
+            .hash = "1220624fdf945ea70fb6281c6137af9d359eace933665245e7792d311dbf10d32b30",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
