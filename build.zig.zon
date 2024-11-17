@@ -4,7 +4,7 @@
     .dependencies = .{
         .zsqlite = .{
             .url = "../zsqlite",
-            .hash = "1220624fdf945ea70fb6281c6137af9d359eace933665245e7792d311dbf10d32b30",
+            .hash = "1220f642c5b37aae74cdb6efafd168d49a1c0cdbd944dbb1976e5088cdf78f83a27c",
         },
     },
     .paths = .{

@@ -13,10 +13,8 @@ pub fn build(b: *std.Build) void {
 
     // Add SQLite
     const zsqlite = b.dependency("zsqlite", .{ .target = target, .optimize = optimize });
-    const zsqlite_artifact = zsqlite.artifact("zsqlite");
     const zsqlite_module = zsqlite.module("zsqlite");
     exe.root_module.addImport("zsqlite", zsqlite_module);
-    exe.linkLibrary(zsqlite_artifact);
 
     b.installArtifact(exe);
 
