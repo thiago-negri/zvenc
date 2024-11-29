@@ -4,6 +4,7 @@ pub const Rule = struct { year: Match, month: Match, day: Match, week_day: Match
 
 const Date = struct { year: i64, month: i64, day: i64 };
 
+// https://howardhinnant.github.io/date_algorithms.html#civil_from_days
 fn dateFromTimestamp(timestamp: i64) Date {
     const seconds_in_day = 24 * 60 * 60;
     var z = @divFloor(timestamp, seconds_in_day);
@@ -19,6 +20,7 @@ fn dateFromTimestamp(timestamp: i64) Date {
     return .{ .year = if (m <= 2) y else y + 1, .month = m, .day = d };
 }
 
+// https://howardhinnant.github.io/date_algorithms.html#days_from_civil
 fn dateToTimestamp(date: Date) i64 {
     var y = date.year;
     const m = date.month;
