@@ -359,6 +359,31 @@ const Date = struct {
         try std.testing.expectEqual(.lt, Date.init(2024, 1, 1, 2).compare(Date.init(2024, 1, 2, 3)));
         try std.testing.expectEqual(.eq, Date.init(2024, 1, 1, 2).compare(Date.init(2024, 1, 1, 2)));
     }
+
+    pub fn nextDay(self: Date) Date {
+        const before_last_week_day = self.week_day < 7;
+        const next_week_day = if (before_last_week_day) self.week_day + 1 else 1;
+
+        const last_day_of_month = lastDayOfMonth(self.year, self.month);
+        const before_last_day_of_month = self.day < last_day_of_month;
+        if (before_last_day_of_month) {
+            return Date.init(self.year, self.month, self.day + 1, next_week_day);
+        }
+
+        const before_last_month = self.month < 12;
+        if (before_last_month) {
+            return Date.init(self.year, self.month + 1, 1, next_week_day);
+        }
+
+        return Date.init(self.year + 1, 1, 1, next_week_day);
+    }
+
+    test "nextDay" {
+        try std.testing.expectEqual(.eq, Date.init(2024, 2, 29, 4).compare(Date.init(2024, 2, 28, 4).nextDay()));
+        try std.testing.expectEqual(.eq, Date.init(2024, 3, 1, 5).compare(Date.init(2024, 2, 29, 5).nextDay()));
+        try std.testing.expectEqual(.eq, Date.init(2024, 12, 1, 1).compare(Date.init(2024, 11, 30, 7).nextDay()));
+        try std.testing.expectEqual(.eq, Date.init(2025, 1, 1, 4).compare(Date.init(2024, 12, 31, 3).nextDay()));
+    }
 };
 
 // https://howardhinnant.github.io/date_algorithms.html#days_from_civil
