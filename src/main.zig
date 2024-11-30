@@ -11,12 +11,13 @@ pub fn main() !void {
     };
     defer db.deinit();
 
-    try migrate(db.sqlite3);
+    {
+        errdefer db.printError("migrate");
+        try migrate(db.sqlite3);
+    }
 
     const now = Date.fromTimestamp(std.time.timestamp());
     std.debug.print("Today is {any}\n", .{now});
-    _ = Matcher{ .all = {} };
-    _ = try Rule.parse("_", std.testing.allocator);
 }
 
 const MatcherType = enum { all, simple, range, multi };
