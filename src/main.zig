@@ -13,4 +13,11 @@ pub fn main() !void {
     defer db.deinit();
 
     try migrate(db.sqlite3);
+
+    const now = scheduler.Date.fromTimestamp(std.time.timestamp());
+    std.debug.print("Today is {any}\n", .{now});
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }
