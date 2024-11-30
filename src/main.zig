@@ -16,6 +16,7 @@ pub fn main() !void {
 
     const now = scheduler.Date.fromTimestamp(std.time.timestamp());
     std.debug.print("Today is {any}\n", .{now});
+    _ = scheduler.Match{ .all = {} };
 }
 
 test {

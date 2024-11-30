@@ -1,22 +1,81 @@
 const std = @import("std");
 const expect = std.testing.expect;
 
-pub const Match = union(enum) { all: void, simple: i16, range: [2]i16, multi: []i16 };
+pub const Match = union(enum) {
+    all,
+    simple: i16,
+    range: [2]i16,
+    multi: []Match,
 
-pub const Rule = struct { year: Match, month: Match, day: Match, week_day: Match };
+    pub fn matches(self: Match, number: i33) bool {
+        switch (self) {
+            .all => return true,
+            .simple => |simple| {
+                return simple == number;
+            },
+            .range => |range| {
+                return range[0] <= number and number <= range[1];
+            },
+            .multi => |multi| {
+                for (multi) |item| {
+                    if (item.matches(number)) {
+                        return true;
+                    }
+                }
+                return false;
+            },
+        }
+    }
+
+    test "matches" {
+        try expect((Match{ .all = {} }).matches(2));
+
+        try expect((Match{ .simple = 5 }).matches(5));
+        try expect(!(Match{ .simple = 5 }).matches(3));
+
+        try expect(!(Match{ .range = .{ 2, 4 } }).matches(1));
+        try expect((Match{ .range = .{ 2, 4 } }).matches(2));
+        try expect((Match{ .range = .{ 2, 4 } }).matches(3));
+        try expect((Match{ .range = .{ 2, 4 } }).matches(4));
+        try expect(!(Match{ .range = .{ 2, 4 } }).matches(6));
+
+        var multi = [_]Match{ .{ .simple = 3 }, .{ .simple = 5 } };
+        try expect(!(Match{ .multi = &multi }).matches(2));
+        try expect((Match{ .multi = &multi }).matches(3));
+        try expect(!(Match{ .multi = &multi }).matches(4));
+        try expect((Match{ .multi = &multi }).matches(5));
+        try expect(!(Match{ .multi = &multi }).matches(6));
+    }
+};
+
+pub const Rule = struct {
+    year: Match,
+    month: Match,
+    day: Match,
+    week_day: Match,
+
+    pub fn matches(self: Rule, date: Date) bool {
+        return self.year.matches(date.year) and
+            self.month.matches(date.month) and
+            (self.day.matches(date.day) or self.day.matches(date.negativeDay())) and
+            self.week_day.matches(date.week_day);
+    }
+};
 
 const Year = u14;
 const Month = u4;
 const Day = u5;
 const NegativeDay = i6;
+const WeekDay = u4;
 
 pub const Date = struct {
     year: Year,
     month: Month,
     day: Day,
+    week_day: WeekDay,
 
-    pub fn init(year: Year, month: Month, day: Day) Date {
-        return Date{ .year = year, .month = month, .day = day };
+    pub fn init(year: Year, month: Month, day: Day, week_day: WeekDay) Date {
+        return Date{ .year = year, .month = month, .day = day, .week_day = week_day };
     }
 
     // https://howardhinnant.github.io/date_algorithms.html#civil_from_days
@@ -36,12 +95,13 @@ pub const Date = struct {
         const year: Year = @intCast(if (m <= 2) y + 1 else y);
         const month: Month = @intCast(m);
         const day: Day = @intCast(d);
+        const week_day: WeekDay = @intCast(1 + @mod(z + 2, @as(WeekDay, 7)));
 
-        return .{ .year = year, .month = month, .day = day };
+        return .{ .year = year, .month = month, .day = day, .week_day = week_day };
     }
 
     test "fromTimestamp" {
-        try expect(Date.fromTimestamp(1732927932).compare(Date.init(2024, 11, 30)) == .eq);
+        try expect(Date.fromTimestamp(1732927932).compare(Date.init(2024, 11, 30, 6)) == .eq);
     }
 
     pub fn negativeDay(self: Date) NegativeDay {
@@ -49,10 +109,10 @@ pub const Date = struct {
     }
 
     test "negativeDay" {
-        try expect(Date.init(2024, 2, 28).negativeDay() == -2);
-        try expect(Date.init(2024, 2, 29).negativeDay() == -1);
-        try expect(Date.init(2025, 2, 28).negativeDay() == -1);
-        try expect(Date.init(2024, 1, 28).negativeDay() == -4);
+        try expect(Date.init(2024, 2, 28, 4).negativeDay() == -2);
+        try expect(Date.init(2024, 2, 29, 5).negativeDay() == -1);
+        try expect(Date.init(2025, 2, 28, 6).negativeDay() == -1);
+        try expect(Date.init(2024, 1, 28, 1).negativeDay() == -4);
     }
 
     pub fn compare(self: Date, other: Date) std.math.Order {
@@ -62,10 +122,10 @@ pub const Date = struct {
     }
 
     test "compare" {
-        try expect(Date.init(2024, 1, 1).compare(Date.init(2025, 1, 1)) == .lt);
-        try expect(Date.init(2024, 1, 1).compare(Date.init(2024, 2, 1)) == .lt);
-        try expect(Date.init(2024, 1, 1).compare(Date.init(2024, 1, 2)) == .lt);
-        try expect(Date.init(2024, 1, 1).compare(Date.init(2024, 1, 1)) == .eq);
+        try expect(Date.init(2024, 1, 1, 2).compare(Date.init(2025, 1, 1, 6)) == .lt);
+        try expect(Date.init(2024, 1, 1, 2).compare(Date.init(2024, 2, 1, 5)) == .lt);
+        try expect(Date.init(2024, 1, 1, 2).compare(Date.init(2024, 1, 2, 3)) == .lt);
+        try expect(Date.init(2024, 1, 1, 2).compare(Date.init(2024, 1, 1, 2)) == .eq);
     }
 };
 
