@@ -219,7 +219,7 @@ const Rule = struct {
     pub fn matches(self: Rule, date: Date) bool {
         return self.year.matches(date.year) and
             self.month.matches(date.month) and
-            (self.day.matches(date.day) or self.day.matches(date.negativeDay())) and
+            (self.day.matches(date.day) or self.day.matches(negativeDay(date.year, date.month, date.day))) and
             self.week_day.matches(date.week_day);
     }
 
@@ -336,17 +336,6 @@ const Date = struct {
         try std.testing.expectEqual(.eq, Date.fromTimestamp(1732927932).compare(Date.init(2024, 11, 30, 6)));
     }
 
-    pub fn negativeDay(self: Date) NegativeDay {
-        return @as(NegativeDay, self.day) - lastDayOfMonth(self.year, self.month) - 1;
-    }
-
-    test "negativeDay" {
-        try std.testing.expectEqual(-2, Date.init(2024, 2, 28, 4).negativeDay());
-        try std.testing.expectEqual(-1, Date.init(2024, 2, 29, 5).negativeDay());
-        try std.testing.expectEqual(-1, Date.init(2025, 2, 28, 6).negativeDay());
-        try std.testing.expectEqual(-4, Date.init(2024, 1, 28, 1).negativeDay());
-    }
-
     pub fn compare(self: Date, other: Date) std.math.Order {
         const this = (@as(i32, self.year) * 12 + @as(i32, self.month)) * 31 + @as(i32, self.day);
         const them = (@as(i32, other.year) * 12 + @as(i32, other.month)) * 31 + @as(i32, other.day);
@@ -416,7 +405,7 @@ test "isLeapYear" {
     try std.testing.expectEqual(false, isLeapYear(2400));
 }
 
-fn lastDayOfMonth(year: u16, month: u8) u5 {
+fn lastDayOfMonth(year: Year, month: Month) Day {
     switch (month) {
         1, 3, 5, 7, 8, 10, 12 => {
             return 31;
@@ -449,6 +438,17 @@ test "lastDayOfMonth" {
     try std.testing.expectEqual(31, lastDayOfMonth(2024, 12));
 
     try std.testing.expectEqual(28, lastDayOfMonth(2025, 2));
+}
+
+pub fn negativeDay(year: Year, month: Month, day: Day) NegativeDay {
+    return @as(NegativeDay, day) - lastDayOfMonth(year, month) - 1;
+}
+
+test "negativeDay" {
+    try std.testing.expectEqual(-2, negativeDay(2024, 2, 28));
+    try std.testing.expectEqual(-1, negativeDay(2024, 2, 29));
+    try std.testing.expectEqual(-1, negativeDay(2025, 2, 28));
+    try std.testing.expectEqual(-4, negativeDay(2024, 1, 28));
 }
 
 test {
