@@ -8,7 +8,7 @@
         },
         .@"zsqlite-migrate" = .{
             .url = "../zsqlite-migrate",
-            .hash = "12205b239a442cc9c25ee2e0dc4e08edc6b379643d92d4f1fe518bb3e7de67687c06",
+            .hash = "122066119fc5c2df80816d446bfbcd7ad54d7ac5255bb9ab9a70b63b6d8006df0fd2",
         },
     },
     .paths = .{

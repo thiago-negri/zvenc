@@ -12,7 +12,7 @@ pub fn main() !void {
 
     {
         errdefer db.printError("migrate");
-        try migrate(db.sqlite3);
+        try migrate(db.sqlite3, .{ .emit_debug = true });
     }
 
     const now = zvenc.date.Date.fromTimestamp(std.time.timestamp());
@@ -23,6 +23,12 @@ pub fn main() !void {
     while (try iter.next()) |row| {
         std.debug.print("Row: {any}\n", .{row});
     }
+}
+
+// Make sure all migrations work fine on a fresh database
+test "migrate" {
+    const db = try Sqlite3.init(":memory:");
+    try migrate(db.sqlite3, .{ .emit_debug = true });
 }
 
 test {

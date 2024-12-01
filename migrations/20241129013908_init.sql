@@ -44,4 +44,5 @@ CREATE TABLE agenda_archive (
 CREATE TABLE scheduler_control (
 	id INT PRIMARY KEY,
 	last_run_at_timestamp INT
-)
+);
+
