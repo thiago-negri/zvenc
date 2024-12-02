@@ -3,12 +3,16 @@
     .version = "0.0.0",
     .dependencies = .{
         .zsqlite = .{
-            .url = "../zsqlite",
-            .hash = "12201820ab6d47338d6673673533cde6c3bf67efa6195ec9d097ef52763564419ebc",
+            .url = "https://github.com/thiago-negri/zsqlite/archive/refs/heads/master.zip",
+            .hash = "1220f76a7c7104f9ead46fb4d8f3bada630e360c76e60d5a576a0c9e551233dd15c5",
         },
         .@"zsqlite-migrate" = .{
-            .url = "../zsqlite-migrate",
-            .hash = "122066119fc5c2df80816d446bfbcd7ad54d7ac5255bb9ab9a70b63b6d8006df0fd2",
+            .url = "https://github.com/thiago-negri/zsqlite-migrate/archive/refs/heads/master.zip",
+            .hash = "1220fb18fbbdc98584f40508a42d1add6873bf75db449dfe9e14850a4d7a02c56a58",
+        },
+        .@"zsqlite-minify" = .{
+            .url = "https://github.com/thiago-negri/zsqlite-minify/archive/refs/heads/master.zip",
+            .hash = "12201cf406d4744a79d9642cf124870d89d4a0ccce259a19bda88b78586db63410b5",
         },
     },
     .paths = .{
