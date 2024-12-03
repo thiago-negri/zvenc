@@ -12,7 +12,11 @@ pub const SchedulerRule = struct {
     }
 };
 
-const SchedulerRuleStatement = zsqlite.StatementIterator(SchedulerRule, SchedulerRule.init, embedMinifiedSql("./src/sqls/scheduler/select.sql"));
+const SchedulerRuleStatement = zsqlite.StatementIterator(
+    SchedulerRule,
+    SchedulerRule.init,
+    embedMinifiedSql("./src/sqls/scheduler/select.sql"),
+);
 
 pub fn selectSchedulerRules(db: zsqlite.Sqlite3) !SchedulerRuleStatement {
     return SchedulerRuleStatement.prepare(db);

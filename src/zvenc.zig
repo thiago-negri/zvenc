@@ -1,6 +1,6 @@
 const std = @import("std");
 pub const data = @import("./data.zig");
-pub const date = @import("./date.zig");
+pub const Date = @import("./Date.zig");
 pub const rule = @import("./rule.zig");
 
 test {

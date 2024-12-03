@@ -15,7 +15,7 @@ pub fn main() !void {
         try migrate(db.sqlite3, .{ .emit_debug = true });
     }
 
-    const now = zvenc.date.Date.fromTimestamp(std.time.timestamp());
+    const now = zvenc.Date.fromTimestamp(std.time.timestamp());
     std.debug.print("Today is {any}\n", .{now});
 
     const iter = try zvenc.data.selectSchedulerRules(db);
