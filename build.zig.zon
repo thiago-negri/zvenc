@@ -4,15 +4,15 @@
     .dependencies = .{
         .zsqlite = .{
             .url = "https://github.com/thiago-negri/zsqlite/archive/refs/heads/master.zip",
-            .hash = "1220f76a7c7104f9ead46fb4d8f3bada630e360c76e60d5a576a0c9e551233dd15c5",
+            .hash = "12208be8d1a0ea909a0535a167edfd16b8a68915ad06e611ff86858fc56eca5aa57e",
         },
         .@"zsqlite-migrate" = .{
             .url = "https://github.com/thiago-negri/zsqlite-migrate/archive/refs/heads/master.zip",
-            .hash = "1220fb18fbbdc98584f40508a42d1add6873bf75db449dfe9e14850a4d7a02c56a58",
+            .hash = "1220b2bc4da63d1d646e2ffded311c05e9191599280cff797a35c453f3763580c2a9",
         },
         .@"zsqlite-minify" = .{
             .url = "https://github.com/thiago-negri/zsqlite-minify/archive/refs/heads/master.zip",
-            .hash = "12201cf406d4744a79d9642cf124870d89d4a0ccce259a19bda88b78586db63410b5",
+            .hash = "1220ed25f061ae68e6b7fa7536c85b639088f0eda63db6a26afb36ac430f137822be",
         },
     },
     .paths = .{
