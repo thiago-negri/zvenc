@@ -32,7 +32,8 @@ pub fn build(b: *std.Build) void {
     const zsqlite_minify = b.dependency("zsqlite-minify", .{
         .target = target,
         .optimize = optimize,
-        .minify_root_path = @as([]const u8, "./src")
+        .minify_root_path = @as([]const u8, "./src/sqls/"),
+        .minify_files_prefix = @as([]const u8, "sqls")
     });
     // zig fmt: on
     const zsqlite_minify_module = zsqlite_minify.module("zsqlite-minify");
