@@ -4,6 +4,7 @@ const std = @import("std");
 
 const Year = enum(u14) {
     _,
+
     pub fn next(self: Year) Year {
         return @enumFromInt(@intFromEnum(self) + 1);
     }
@@ -22,6 +23,7 @@ const Month = enum {
     october,
     november,
     december,
+
     pub fn next(self: Month) Month {
         return switch (self) {
             .january => .february,
@@ -42,15 +44,19 @@ const Month = enum {
 
 const Day = enum(u5) {
     _,
+
     pub fn compare(self: Day, other: Day) std.math.Order {
         return std.math.order(@intFromEnum(self), @intFromEnum(other));
     }
+
     pub fn next(self: Day) Day {
         return @enumFromInt(@intFromEnum(self) + 1);
     }
+
     pub fn toNegative(self: Day, year: Year, month: Month) NegativeDay {
         return @enumFromInt(@as(i6, @intFromEnum(self)) - @intFromEnum(lastDayOfMonth(year, month)) - 1);
     }
+
     test "toNegative" {
         try std.testing.expectEqual(
             @as(NegativeDay, @enumFromInt(-2)),
@@ -71,7 +77,9 @@ const Day = enum(u5) {
     }
 };
 
-const NegativeDay = enum(i6) { _ };
+const NegativeDay = enum(i6) {
+    _,
+};
 
 const WeekDay = enum {
     sunday,
@@ -81,6 +89,7 @@ const WeekDay = enum {
     thursday,
     friday,
     saturday,
+
     pub fn next(self: WeekDay) WeekDay {
         return switch (self) {
             .sunday => .monday,
@@ -108,7 +117,7 @@ pub fn init(year: Year, month: Month, day: Day, week_day: WeekDay) Date {
     };
 }
 
-pub fn initFromInt(year: u14, month: u4, day: u5, week_day: u4) Date {
+pub fn fromInts(year: u14, month: u4, day: u5, week_day: u4) Date {
     return Date{
         .year = @enumFromInt(year),
         .month = @enumFromInt(month - 1),
@@ -139,24 +148,24 @@ pub fn fromTimestamp(timestamp: i64) Date {
 }
 
 test "fromTimestamp" {
-    try std.testing.expectEqual(.eq, Date.fromTimestamp(1732927932).compare(Date.initFromInt(2024, 11, 30, 6)));
+    try std.testing.expectEqual(.eq, Date.fromTimestamp(1732927932).compare(Date.fromInts(2024, 11, 30, 6)));
+}
+
+inline fn hash(self: Date) i32 {
+    return (@as(i32, @intFromEnum(self.year)) * 11 +
+        @intFromEnum(self.month)) * 31 +
+        @intFromEnum(self.day);
 }
 
 pub fn compare(self: Date, other: Date) std.math.Order {
-    const this = (@as(i32, @intFromEnum(self.year)) * 11 +
-        @intFromEnum(self.month)) * 31 +
-        @intFromEnum(self.day);
-    const them = (@as(i32, @intFromEnum(other.year)) * 11 +
-        @intFromEnum(other.month)) * 31 +
-        @intFromEnum(other.day);
-    return std.math.order(this, them);
+    return std.math.order(self.hash(), other.hash());
 }
 
 test "compare" {
-    try std.testing.expectEqual(.lt, Date.initFromInt(2024, 1, 1, 2).compare(Date.initFromInt(2025, 1, 1, 6)));
-    try std.testing.expectEqual(.lt, Date.initFromInt(2024, 1, 1, 2).compare(Date.initFromInt(2024, 2, 1, 5)));
-    try std.testing.expectEqual(.lt, Date.initFromInt(2024, 1, 1, 2).compare(Date.initFromInt(2024, 1, 2, 3)));
-    try std.testing.expectEqual(.eq, Date.initFromInt(2024, 1, 1, 2).compare(Date.initFromInt(2024, 1, 1, 2)));
+    try std.testing.expectEqual(.lt, Date.fromInts(2024, 1, 1, 2).compare(Date.fromInts(2025, 1, 1, 6)));
+    try std.testing.expectEqual(.lt, Date.fromInts(2024, 1, 1, 2).compare(Date.fromInts(2024, 2, 1, 5)));
+    try std.testing.expectEqual(.lt, Date.fromInts(2024, 1, 1, 2).compare(Date.fromInts(2024, 1, 2, 3)));
+    try std.testing.expectEqual(.eq, Date.fromInts(2024, 1, 1, 2).compare(Date.fromInts(2024, 1, 1, 2)));
 }
 
 pub fn nextDate(self: Date) Date {
@@ -179,19 +188,19 @@ pub fn nextDate(self: Date) Date {
 test "nextDay" {
     try std.testing.expectEqual(
         .eq,
-        Date.initFromInt(2024, 2, 29, 4).compare(Date.initFromInt(2024, 2, 28, 4).nextDate()),
+        Date.fromInts(2024, 2, 29, 4).compare(Date.fromInts(2024, 2, 28, 4).nextDate()),
     );
     try std.testing.expectEqual(
         .eq,
-        Date.initFromInt(2024, 3, 1, 5).compare(Date.initFromInt(2024, 2, 29, 5).nextDate()),
+        Date.fromInts(2024, 3, 1, 5).compare(Date.fromInts(2024, 2, 29, 5).nextDate()),
     );
     try std.testing.expectEqual(
         .eq,
-        Date.initFromInt(2024, 12, 1, 1).compare(Date.initFromInt(2024, 11, 30, 7).nextDate()),
+        Date.fromInts(2024, 12, 1, 1).compare(Date.fromInts(2024, 11, 30, 7).nextDate()),
     );
     try std.testing.expectEqual(
         .eq,
-        Date.initFromInt(2025, 1, 1, 4).compare(Date.initFromInt(2024, 12, 31, 3).nextDate()),
+        Date.fromInts(2025, 1, 1, 4).compare(Date.fromInts(2024, 12, 31, 3).nextDate()),
     );
 }
 
