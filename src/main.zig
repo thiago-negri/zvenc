@@ -18,6 +18,9 @@ pub fn main() !void {
     const now = zvenc.Date.fromTimestamp(std.time.timestamp());
     std.debug.print("Today is {any}\n", .{now});
 
+    const last_run = try zvenc.data.selectLastRunTimeMs(db);
+    std.debug.print("Last run: {any}\n", .{last_run});
+
     const iter = try zvenc.data.selectSchedulerRules(db);
     std.debug.print("Iter: {any}\n", .{iter});
     while (try iter.next()) |row| {
