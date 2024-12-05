@@ -24,9 +24,17 @@ pub fn selectSchedulerRules(db: zsqlite.Sqlite3) !SchedulerRuleStatement {
 
 pub fn selectLastRunTimeMs(db: zsqlite.Sqlite3) !?i64 {
     const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_control_select.sql"));
+    defer stmt.deinit();
     if (try stmt.step()) |row| {
         const last_run_time = row.column(0, i64);
         return last_run_time;
     }
     return null;
+}
+
+pub fn updateLastRunTimeMs(db: zsqlite.Sqlite3, timestamp: i64) !void {
+    const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_control_update.sql"));
+    defer stmt.deinit();
+    try stmt.bind(1, timestamp);
+    try stmt.exec();
 }

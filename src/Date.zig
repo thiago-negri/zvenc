@@ -2,10 +2,16 @@ const Date = @This();
 
 const std = @import("std");
 
-const Year = enum(u14) {
+/// TimeZone in minutes
+const Timezone = enum(i12) {
+    brazil = -180,
+    utc = 0,
+};
+
+const Year = enum(u16) {
     _,
 
-    pub fn next(self: Year) Year {
+    pub inline fn next(self: Year) Year {
         return @enumFromInt(@intFromEnum(self) + 1);
     }
 };
@@ -24,7 +30,7 @@ const Month = enum {
     november,
     december,
 
-    pub fn next(self: Month) Month {
+    pub inline fn next(self: Month) Month {
         return switch (self) {
             .january => .february,
             .february => .march,
@@ -45,15 +51,15 @@ const Month = enum {
 const Day = enum(u5) {
     _,
 
-    pub fn compare(self: Day, other: Day) std.math.Order {
+    pub inline fn compare(self: Day, other: Day) std.math.Order {
         return std.math.order(@intFromEnum(self), @intFromEnum(other));
     }
 
-    pub fn next(self: Day) Day {
+    pub inline fn next(self: Day) Day {
         return @enumFromInt(@intFromEnum(self) + 1);
     }
 
-    pub fn toNegative(self: Day, year: Year, month: Month) NegativeDay {
+    pub inline fn toNegative(self: Day, year: Year, month: Month) NegativeDay {
         return @enumFromInt(@as(i6, @intFromEnum(self)) - @intFromEnum(lastDayOfMonth(year, month)) - 1);
     }
 
@@ -126,10 +132,12 @@ pub fn fromInts(year: u14, month: u4, day: u5, week_day: u4) Date {
     };
 }
 
-// https://howardhinnant.github.io/date_algorithms.html#civil_from_days
-pub fn fromTimestamp(timestamp: i64) Date {
-    const seconds_in_day = 24 * 60 * 60;
-    const z = @divTrunc(timestamp, seconds_in_day) + 719468;
+pub fn fromTimestamp(timestamp_utc: i64, timezone: Timezone) Date {
+    const secs_per_minute: i64 = 60;
+    const timestamp = timestamp_utc + @intFromEnum(timezone) * secs_per_minute;
+
+    // https://howardhinnant.github.io/date_algorithms.html#civil_from_days
+    const z = @divTrunc(timestamp, std.time.epoch.secs_per_day) + 719468;
     const era = @divTrunc(if (z >= 0) z else z - 146096, 146097);
     const doe = (z - era * 146097);
     const yoe = @divTrunc(doe - @divTrunc(doe, 1460) + @divTrunc(doe, 36524) - @divTrunc(doe, 146096), 365);
@@ -148,7 +156,7 @@ pub fn fromTimestamp(timestamp: i64) Date {
 }
 
 test "fromTimestamp" {
-    try std.testing.expectEqual(.eq, Date.fromTimestamp(1732927932).compare(Date.fromInts(2024, 11, 30, 6)));
+    try std.testing.expectEqual(.eq, Date.fromTimestamp(1732927932, 0).compare(Date.fromInts(2024, 11, 30, 6)));
 }
 
 inline fn hash(self: Date) i32 {

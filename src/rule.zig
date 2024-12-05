@@ -1,5 +1,5 @@
 const std = @import("std");
-const Date = @import("./date.zig").Date;
+const Date = @import("./Date.zig");
 
 pub const Rule = struct {
     year: Matcher,
