@@ -1,13 +1,18 @@
-const std = @import("std");
-const Sqlite3 = @import("zsqlite").Sqlite3;
 const migrate = @import("zsqlite-migrate").migrate;
+const Sqlite3 = @import("zsqlite").Sqlite3;
+const std = @import("std");
 const zvenc = @import("./zvenc.zig");
 
-const my_timezone = .brazil;
+const Gpa = std.heap.GeneralPurposeAllocator(.{});
+
 const db_filename = "zvenc.db";
+const my_timezone = .brazil;
 
 pub fn main() !void {
-    const db = Sqlite3.init(db_filename) catch |err| {
+    var gpa = Gpa{};
+    defer _ = gpa.deinit();
+
+    var db = Sqlite3.init(db_filename, .{ .alloc = gpa.allocator() }) catch |err| {
         std.debug.print("Failed to connect to SQLite", .{});
         return err;
     };
@@ -22,7 +27,7 @@ pub fn main() !void {
     const today = zvenc.Date.fromTimestamp(now, my_timezone);
     std.debug.print("Today is {any}\n", .{today});
 
-    const last_run = try zvenc.data.selectLastRunTimeMs(db);
+    const last_run = try zvenc.data.selectLastRunTimeMs(&db);
     std.debug.print("Last run: {any}\n", .{last_run});
 
     const first_run = if (last_run) |date|
@@ -36,13 +41,14 @@ pub fn main() !void {
         std.debug.print("We've already ran today!\n", .{});
     }
 
-    const iter = try zvenc.data.selectSchedulerRules(db);
+    const iter = try zvenc.data.selectSchedulerRules(&db);
+    defer iter.deinit();
     std.debug.print("Iter: {any}\n", .{iter});
     while (try iter.next()) |row| {
         std.debug.print("Row: {any}\n", .{row});
     }
 
-    try zvenc.data.updateLastRunTimeMs(db, now);
+    try zvenc.data.updateLastRunTimeMs(&db, now);
 }
 
 // Make sure all migrations work fine on a fresh database

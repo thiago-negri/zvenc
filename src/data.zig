@@ -18,11 +18,11 @@ const SchedulerRuleStatement = zsqlite.StatementIterator(
     embedMinifiedSql("sqls/scheduler_select.sql"),
 );
 
-pub fn selectSchedulerRules(db: zsqlite.Sqlite3) !SchedulerRuleStatement {
+pub fn selectSchedulerRules(db: *zsqlite.Sqlite3) !SchedulerRuleStatement {
     return SchedulerRuleStatement.prepare(db);
 }
 
-pub fn selectLastRunTimeMs(db: zsqlite.Sqlite3) !?i64 {
+pub fn selectLastRunTimeMs(db: *zsqlite.Sqlite3) !?i64 {
     const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_control_select.sql"));
     defer stmt.deinit();
     if (try stmt.step()) |row| {
@@ -32,7 +32,7 @@ pub fn selectLastRunTimeMs(db: zsqlite.Sqlite3) !?i64 {
     return null;
 }
 
-pub fn updateLastRunTimeMs(db: zsqlite.Sqlite3, timestamp: i64) !void {
+pub fn updateLastRunTimeMs(db: *zsqlite.Sqlite3, timestamp: i64) !void {
     const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_control_update.sql"));
     defer stmt.deinit();
     try stmt.bind(1, timestamp);
