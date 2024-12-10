@@ -44,6 +44,7 @@ pub fn main() !void {
     if (first_run.compare(today) == .gt) {
         std.debug.print("We've already ran today!\n", .{});
     } else {
+        // FIXME: Use rules_count to allocate that list
         var rules_list = std.ArrayList(zvenc.rule.Rule).init(alloc);
         defer {
             for (rules_list.items) |item| {
