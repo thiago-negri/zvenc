@@ -18,6 +18,17 @@ const SchedulerRuleStatement = zsqlite.StatementIterator(
     embedMinifiedSql("sqls/scheduler_select.sql"),
 );
 
+pub fn selectSchedulerRulesCount(db: *zsqlite.Sqlite3) !u64 {
+    const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_count.sql"));
+    defer stmt.deinit();
+    const opt_row = try stmt.step();
+    if (opt_row) |row| {
+        const count = row.column(0, i64);
+        return @intCast(count);
+    }
+    return 0;
+}
+
 pub fn selectSchedulerRules(db: *zsqlite.Sqlite3) !SchedulerRuleStatement {
     return SchedulerRuleStatement.prepare(db);
 }
