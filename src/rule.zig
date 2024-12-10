@@ -1,6 +1,13 @@
 const std = @import("std");
 const Date = @import("./Date.zig");
 
+const RuleField = enum {
+    year,
+    month,
+    day,
+    week_day,
+};
+
 pub const Rule = struct {
     year: Matcher,
     month: Matcher,
@@ -19,7 +26,6 @@ pub const Rule = struct {
     }
 
     pub fn parse(string: []const u8, alloc: std.mem.Allocator) !Rule {
-        var start_index: usize = 0;
         var matchers = [_]Matcher{.{ .all = {} }} ** 4;
         errdefer {
             for (matchers) |matcher| {
@@ -27,34 +33,52 @@ pub const Rule = struct {
             }
         }
 
-        var matchers_index: usize = 0;
+        var matcher_start: usize = 0;
+        var opt_matcher_type: ?RuleField = null;
         for (string, 0..) |char, string_index| {
-            if (char == ' ') {
-                const substring = string[start_index..string_index];
-                start_index = string_index + 1;
-                matchers[matchers_index] = try Matcher.parse(substring, alloc);
-                matchers_index += 1;
+            switch (char) {
+                ' ', 'y', 'm', 'd', 'w' => {
+                    if (opt_matcher_type) |matcher_type| {
+                        const substring = string[matcher_start..string_index];
+                        const matcher = try Matcher.parse(substring, alloc);
+                        matchers[@intFromEnum(matcher_type)] = matcher;
+                    }
+                    opt_matcher_type = switch (char) {
+                        'y' => .year,
+                        'm' => .month,
+                        'd' => .day,
+                        'w' => .week_day,
+                        else => null,
+                    };
+                    if (char != ' ') {
+                        matcher_start = string_index + 1;
+                    }
+                },
+                else => {},
             }
         }
-        const substring = string[start_index..];
-        matchers[matchers_index] = try Matcher.parse(substring, alloc);
+        if (opt_matcher_type) |matcher_type| {
+            const substring = string[matcher_start..];
+            const matcher = try Matcher.parse(substring, alloc);
+            matchers[@intFromEnum(matcher_type)] = matcher;
+        }
 
-        const year = matchers[0];
-        const month = matchers[1];
-        const day = matchers[2];
-        const week_day = matchers[3];
+        const year = matchers[@intFromEnum(RuleField.year)];
+        const month = matchers[@intFromEnum(RuleField.month)];
+        const day = matchers[@intFromEnum(RuleField.day)];
+        const week_day = matchers[@intFromEnum(RuleField.week_day)];
 
         return Rule.init(year, month, day, week_day);
     }
 
     test "parse" {
-        const rule_all = try Rule.parse("_", std.testing.failing_allocator);
+        const rule_all = try Rule.parse("", std.testing.failing_allocator);
         try std.testing.expectEqual(MatcherType.all, @as(MatcherType, rule_all.year));
         try std.testing.expectEqual(MatcherType.all, @as(MatcherType, rule_all.month));
         try std.testing.expectEqual(MatcherType.all, @as(MatcherType, rule_all.day));
         try std.testing.expectEqual(MatcherType.all, @as(MatcherType, rule_all.week_day));
 
-        const rule_everything = try Rule.parse("_ 1 2,3 -3.-1", std.testing.allocator);
+        const rule_everything = try Rule.parse("y* m1 d2,3 w-3.-1", std.testing.allocator);
         defer rule_everything.deinit(std.testing.allocator);
         try std.testing.expectEqual(MatcherType.all, @as(MatcherType, rule_everything.year));
         try std.testing.expectEqual(MatcherType.simple, @as(MatcherType, rule_everything.month));
@@ -63,67 +87,69 @@ pub const Rule = struct {
     }
 
     pub fn matches(self: Rule, date: Date) bool {
-        return self.year.matches(date.year) and
-            self.month.matches(date.month) and
-            (self.day.matches(date.day) or self.day.matches(date.negativeDay())) and
-            self.week_day.matches(date.week_day);
+        const year_match = self.year.matches(@intFromEnum(date.year));
+        const month_match = self.month.matches(@intFromEnum(date.month) + 1);
+        const day_match = self.day.matches(@intFromEnum(date.day));
+        const negative_day_match = self.day.matches(@intFromEnum(date.day.toNegative(date.year, date.month)));
+        const week_day_match = self.week_day.matches(@intFromEnum(date.week_day) + 1);
+        return year_match and month_match and (day_match or negative_day_match) and week_day_match;
     }
 
     test "matches" {
         const now_ts = std.time.timestamp();
-        const now = Date.fromTimestamp(now_ts);
+        const now = Date.fromTimestamp(now_ts, .utc);
 
-        // zig fmt: off
         const TestCase = struct {
             rule: []const u8,
             matches: []const Date,
-            skips: []const Date
+            skips: []const Date,
         };
         const test_cases: []const TestCase = &[_]TestCase{
             .{
                 // Every day
-                .rule = "_",
+                .rule = "",
                 .matches = &[_]Date{
                     now,
-                    Date.init(2024, 1, 1, 2)
+                    Date.init(@enumFromInt(2024), .january, @enumFromInt(1), .tuesday),
                 },
-                .skips = &[0]Date{} 
-            }, .{
+                .skips = &[0]Date{},
+            },
+            .{
                 // 1st day of every month
-                .rule = "_ _ 1",
+                .rule = "d1",
                 .matches = &[_]Date{
-                    Date.init(2024, 1, 1, 2),
-                    Date.init(2024, 2, 1, 5),
-                    Date.init(2024, 3, 1, 6),
-                    Date.init(2024, 4, 1, 2),
-                    Date.init(2024, 5, 1, 4),
-                    Date.init(2024, 6, 1, 7),
-                    Date.init(2024, 7, 1, 2),
-                    Date.init(2024, 8, 1, 5),
-                    Date.init(2024, 9, 1, 1),
-                    Date.init(2024, 10, 1, 3),
-                    Date.init(2024, 11, 1, 6),
-                    Date.init(2024, 12, 1, 1)
+                    Date.init(@enumFromInt(2024), .january, @enumFromInt(1), .monday),
+                    Date.init(@enumFromInt(2024), .february, @enumFromInt(1), .thursday),
+                    Date.init(@enumFromInt(2024), .march, @enumFromInt(1), .friday),
+                    Date.init(@enumFromInt(2024), .april, @enumFromInt(1), .monday),
+                    Date.init(@enumFromInt(2024), .june, @enumFromInt(1), .wednesday),
+                    Date.init(@enumFromInt(2024), .july, @enumFromInt(1), .saturday),
+                    Date.init(@enumFromInt(2024), .september, @enumFromInt(1), .monday),
+                    Date.init(@enumFromInt(2024), .august, @enumFromInt(1), .thursday),
+                    Date.init(@enumFromInt(2024), .september, @enumFromInt(1), .sunday),
+                    Date.init(@enumFromInt(2024), .october, @enumFromInt(1), .tuesday),
+                    Date.init(@enumFromInt(2024), .november, @enumFromInt(1), .friday),
+                    Date.init(@enumFromInt(2024), .december, @enumFromInt(1), .sunday),
                 },
                 .skips = &[_]Date{
-                    Date.init(2024, 1, 2, 7),
-                }
-            }, .{
+                    Date.init(@enumFromInt(2024), .january, @enumFromInt(2), .sunday),
+                },
+            },
+            .{
                 // Last Tuesday of every month
-                .rule = "_ _ -7.-1 3",
+                .rule = "d-7.-1w3",
                 .matches = &[_]Date{
-                    Date.init(2024, 1, 30, 3),
-                    Date.init(2024, 2, 27, 3),
+                    Date.init(@enumFromInt(2024), .january, @enumFromInt(30), .tuesday),
+                    Date.init(@enumFromInt(2024), .february, @enumFromInt(27), .tuesday),
                 },
                 .skips = &[_]Date{
-                    Date.init(2024, 1, 23, 3),
-                    Date.init(2024, 1, 29, 2),
-                    Date.init(2024, 1, 31, 4),
-                    Date.init(2024, 2, 20, 3),
-                }
-            }
+                    Date.init(@enumFromInt(2024), .january, @enumFromInt(23), .tuesday),
+                    Date.init(@enumFromInt(2024), .january, @enumFromInt(29), .monday),
+                    Date.init(@enumFromInt(2024), .january, @enumFromInt(31), .wednesday),
+                    Date.init(@enumFromInt(2024), .february, @enumFromInt(20), .tuesday),
+                },
+            },
         };
-        // zig fmt: on
 
         for (test_cases) |test_case| {
             const rule = try Rule.parse(test_case.rule, std.testing.allocator);
@@ -158,7 +184,7 @@ const Matcher = union(MatcherType) {
     }
 
     pub fn parse(string: []const u8, alloc: std.mem.Allocator) !Matcher {
-        if (string.len == 1 and string[0] == '_') {
+        if (string.len == 1 and string[0] == '*') {
             return Matcher{ .all = {} };
         }
 
@@ -174,7 +200,15 @@ const Matcher = union(MatcherType) {
             }
         }
 
-        const match_type: MatcherType = if (multi_count > 1) .multi else if (opt_range_index != null) .range else .simple;
+        const match_type: MatcherType = blk: {
+            if (multi_count > 1) {
+                break :blk .multi;
+            } else if (opt_range_index != null) {
+                break :blk .range;
+            } else {
+                break :blk .simple;
+            }
+        };
 
         switch (match_type) {
             .all => unreachable,
@@ -211,7 +245,7 @@ const Matcher = union(MatcherType) {
     }
 
     test "parse" {
-        const match_all = try Matcher.parse("_", std.testing.failing_allocator);
+        const match_all = try Matcher.parse("*", std.testing.failing_allocator);
         try std.testing.expectEqual(MatcherType.all, @as(MatcherType, match_all));
 
         const match_simple = try Matcher.parse("42", std.testing.failing_allocator);
@@ -235,7 +269,7 @@ const Matcher = union(MatcherType) {
         try std.testing.expectEqual(-3, match_multi.multi[2].simple);
     }
 
-    pub fn matches(self: Matcher, number: i33) bool {
+    pub fn matches(self: Matcher, number: i32) bool {
         switch (self) {
             .all => return true,
             .simple => |simple| {
@@ -275,3 +309,7 @@ const Matcher = union(MatcherType) {
         try std.testing.expect(!(Matcher{ .multi = &multi }).matches(6));
     }
 };
+
+test {
+    std.testing.refAllDecls(@This());
+}

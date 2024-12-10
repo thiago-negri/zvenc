@@ -156,7 +156,7 @@ pub fn fromTimestamp(timestamp_utc: i64, timezone: Timezone) Date {
 }
 
 test "fromTimestamp" {
-    try std.testing.expectEqual(.eq, Date.fromTimestamp(1732927932, 0).compare(Date.fromInts(2024, 11, 30, 6)));
+    try std.testing.expectEqual(.eq, Date.fromTimestamp(1732927932, .utc).compare(Date.fromInts(2024, 11, 30, 6)));
 }
 
 inline fn hash(self: Date) i32 {

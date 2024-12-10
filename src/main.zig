@@ -53,7 +53,7 @@ pub fn main() !void {
 
 // Make sure all migrations work fine on a fresh database
 test "migrate" {
-    const db = try Sqlite3.init(":memory:");
+    const db = try Sqlite3.init(":memory:", .{ .alloc = std.testing.failing_allocator });
     try migrate(db.sqlite3, .{ .emit_debug = true });
 }
 

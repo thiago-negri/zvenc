@@ -1,1 +1,1 @@
-INSERT INTO scheduler (rule) VALUES ('_ 3')
+INSERT INTO scheduler (rule) VALUES ('m3')
