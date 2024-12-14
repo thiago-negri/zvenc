@@ -31,42 +31,50 @@ pub fn main() !void {
     const last_run = try zvenc.data.selectLastRunTimeMs(&db);
     std.debug.print("Last run: {any}\n", .{last_run});
 
-    const first_run = if (last_run) |date|
+    const check_date_start = if (last_run) |date|
         zvenc.Date.fromTimestamp(date, .utc).nextDate()
     else
         zvenc.Date.fromTimestamp(now, my_timezone);
 
-    std.debug.print("First run: {any}\n", .{first_run});
+    const check_date_end = today.addDays(60);
+
+    std.debug.print("Today check start: {any}\n", .{check_date_start});
 
     const rules_count = try zvenc.data.selectSchedulerRulesCount(&db);
     std.debug.print("Rules count: {any}\n", .{rules_count});
 
-    if (first_run.compare(today) == .gt) {
-        std.debug.print("We've already ran today!\n", .{});
-    } else {
-        // FIXME: Use rules_count to allocate that list
-        var rules_list = std.ArrayList(zvenc.rule.Rule).init(alloc);
-        defer {
-            for (rules_list.items) |item| {
-                item.deinit(alloc);
-            }
-            rules_list.deinit();
+    var rules_list = try std.ArrayList(zvenc.rule.Rule).initCapacity(alloc, rules_count);
+    defer {
+        for (rules_list.items) |item| {
+            item.deinit(alloc);
         }
-        const iter = try zvenc.data.selectSchedulerRules(&db);
-        defer iter.deinit();
-        std.debug.print("Iter: {any}\n", .{iter});
-        while (try iter.next()) |row| {
-            std.debug.print("Row: {any}\n", .{row});
-            const rule = try zvenc.rule.Rule.parse(row.rule, alloc);
-            errdefer rule.deinit(alloc);
-            try rules_list.append(rule);
-        }
-
-        var run_date = first_run;
-        while (run_date.compare(today) != .gt) : (run_date = run_date.nextDate()) {}
+        rules_list.deinit();
     }
 
-    try zvenc.data.updateLastRunTimeMs(&db, now);
+    const iter = try zvenc.data.selectSchedulerRules(&db);
+    defer iter.deinit();
+
+    std.debug.print("Iter: {any}\n", .{iter});
+    while (try iter.next()) |row| {
+        std.debug.print("Row: {any}\n", .{row});
+        const rule = try zvenc.rule.Rule.parse(row.rule, alloc);
+        errdefer rule.deinit(alloc);
+        try rules_list.append(rule);
+    }
+
+    var check_date = check_date_start;
+    while (check_date.compare(check_date_end) != .gt) : (check_date = check_date.nextDate()) {
+        if (check_date_start.compare(check_date_end) == .gt) {
+            std.debug.print("we've already ran today!\n", .{});
+        } else {
+            for (rules_list.items) |rule| {
+                const match = rule.matches(check_date);
+                std.debug.print("Rule ${any} matches ${any}: ${any}\n", .{ rule, check_date, match });
+            }
+        }
+    }
+
+    try zvenc.data.updateLastRunTimeMs(&db, check_date_end.toTimestamp());
 }
 
 // Make sure all migrations work fine on a fresh database

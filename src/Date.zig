@@ -107,6 +107,23 @@ const WeekDay = enum {
             .saturday => .sunday,
         };
     }
+
+    pub fn addDays(self: WeekDay, days: u32) WeekDay {
+        const normalized = @mod(@intFromEnum(self) + days, 7);
+        return @enumFromInt(normalized);
+    }
+
+    test "addDays" {
+        try std.testing.expectEqual(.sunday, WeekDay.sunday.addDays(0));
+        try std.testing.expectEqual(.sunday, WeekDay.sunday.addDays(7));
+        try std.testing.expectEqual(.sunday, WeekDay.sunday.addDays(14));
+        try std.testing.expectEqual(.monday, WeekDay.sunday.addDays(1));
+        try std.testing.expectEqual(.tuesday, WeekDay.sunday.addDays(2));
+        try std.testing.expectEqual(.wednesday, WeekDay.sunday.addDays(3));
+        try std.testing.expectEqual(.thursday, WeekDay.sunday.addDays(4));
+        try std.testing.expectEqual(.friday, WeekDay.sunday.addDays(5));
+        try std.testing.expectEqual(.saturday, WeekDay.sunday.addDays(6));
+    }
 };
 
 year: Year,
@@ -193,7 +210,7 @@ pub fn nextDate(self: Date) Date {
     return Date.init(self.year.next(), .january, @enumFromInt(1), next_week_day);
 }
 
-test "nextDay" {
+test "nextDate" {
     try std.testing.expectEqual(
         .eq,
         Date.fromInts(2024, 2, 29, 4).compare(Date.fromInts(2024, 2, 28, 4).nextDate()),
@@ -212,11 +229,28 @@ test "nextDay" {
     );
 }
 
+pub fn addDays(self: Date, days: u32) Date {
+    var new_day = @intFromEnum(self.day) + days;
+    var new_month = self.month;
+    var new_year = @intFromEnum(self.year);
+    var last_day_of_month = lastDayOfMonth(self.year, self.month);
+    while (new_day > @intFromEnum(last_day_of_month)) {
+        new_day -= @intFromEnum(last_day_of_month);
+        new_month = new_month.next();
+        if (new_month == .january) {
+            new_year += 1;
+        }
+        last_day_of_month = lastDayOfMonth(@enumFromInt(new_year), new_month);
+    }
+    const new_week_day = self.week_day.addDays(days);
+    return Date.init(@enumFromInt(new_year), new_month, @enumFromInt(new_day), new_week_day);
+}
+
 // https://howardhinnant.github.io/date_algorithms.html#days_from_civil
-fn dateToTimestamp(date: Date) i64 {
-    var y = @intFromEnum(date.year);
-    const m = @intFromEnum(date.month);
-    const d = @intFromEnum(date.day);
+pub fn toTimestamp(date: Date) i64 {
+    var y = @as(i64, @intFromEnum(date.year));
+    const m = @as(i64, @intFromEnum(date.month));
+    const d = @as(i64, @intFromEnum(date.day));
     if (m > 2) {
         y -= 1;
     }
