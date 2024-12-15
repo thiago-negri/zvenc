@@ -1,7 +1,10 @@
+const AgendaInsert = @import("AgendaInsert.zig");
+const data = @import("data.zig");
+const Date = @import("Date.zig");
 const migrate = @import("zsqlite-migrate").migrate;
+const Scheduler = @import("Scheduler.zig");
 const Sqlite3 = @import("zsqlite").Sqlite3;
 const std = @import("std");
-const zvenc = @import("zvenc.zig");
 
 const Gpa = std.heap.GeneralPurposeAllocator(.{});
 
@@ -25,25 +28,25 @@ pub fn main() !void {
     };
 
     const now = std.time.timestamp();
-    const today = zvenc.Date.fromTimestamp(now, my_timezone);
+    const today = Date.fromTimestamp(now, my_timezone);
     std.debug.print("Today is {any}\n", .{today});
 
-    const last_run = try zvenc.data.selectLastRunTimeMs(&db);
+    const last_run = try data.selectLastRunTimeMs(&db);
     std.debug.print("Last run: {any}\n", .{last_run});
 
     const check_date_start = if (last_run) |date|
-        zvenc.Date.fromTimestamp(date, .utc).nextDate()
+        Date.fromTimestamp(date, .utc).nextDate()
     else
-        zvenc.Date.fromTimestamp(now, my_timezone);
+        Date.fromTimestamp(now, my_timezone);
 
     const check_date_end = today.addDays(60);
 
     std.debug.print("Today check start: {any}\n", .{check_date_start});
 
-    const rules_count = try zvenc.data.selectSchedulerRulesCount(&db);
+    const rules_count = try data.selectSchedulerRulesCount(&db);
     std.debug.print("Rules count: {any}\n", .{rules_count});
 
-    var scheduler_list = try std.ArrayList(zvenc.Scheduler).initCapacity(alloc, rules_count);
+    var scheduler_list = try std.ArrayList(Scheduler).initCapacity(alloc, rules_count);
     defer {
         for (scheduler_list.items) |item| {
             item.deinit(alloc);
@@ -53,7 +56,7 @@ pub fn main() !void {
 
     // Populate scheduler_list
     {
-        const iter = try zvenc.data.selectSchedulerRules(&db);
+        const iter = try data.selectSchedulerRules(&db);
         defer iter.deinit();
         while (try iter.next(alloc)) |row| {
             errdefer row.deinit(alloc);
@@ -61,6 +64,8 @@ pub fn main() !void {
         }
     }
 
+    // TODO: Allow reruns that do not overwrite agenda with matching scheduler_id and due_at
+    //
     // Loop through all dates
     if (check_date_start.compare(check_date_end) == .gt) {
         std.debug.print("We've already ran today!\n", .{});
@@ -72,20 +77,21 @@ pub fn main() !void {
                 const match = scheduler.rule_parsed.matches(check_date);
                 if (match) {
                     // Generate an entry
-                    const agenda = zvenc.AgendaInsert{
+                    const agenda = AgendaInsert{
                         .scheduler_id = scheduler.id,
                         .description = scheduler.description,
                         .tags_csv = scheduler.tags_csv,
                         .monetary_value = scheduler.monetary_value,
                         .due_at = timestamp,
                     };
-                    try zvenc.data.insertAgenda(&db, agenda);
+                    try data.insertAgenda(&db, agenda);
                 }
             }
         }
     }
 
-    try zvenc.data.updateLastRunTimeMs(&db, check_date_end.toTimestamp());
+    // Update last run
+    try data.updateLastRunTimeMs(&db, check_date_end.toTimestamp());
 }
 
 // Make sure all migrations work fine on a fresh database
