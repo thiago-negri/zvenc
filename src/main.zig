@@ -42,9 +42,9 @@ fn list(db: *Sqlite3) !void {
     const now = std.time.timestamp();
     const today = Date.fromTimestamp(now, .utc);
     std.debug.print("TODAY: {d}/{d}/{d} {any}\n", .{
-        today.year,
+        @intFromEnum(today.year),
         @intFromEnum(today.month) + 1,
-        today.day,
+        @intFromEnum(today.day),
         today.week_day,
     });
 
@@ -56,9 +56,9 @@ fn list(db: *Sqlite3) !void {
         const compare = date.compare(today);
         if (compare != .gt) {
             std.debug.print("Due -- {d}/{d}/{d} {s}\n", .{
-                date.year,
+                @intFromEnum(date.year),
                 @intFromEnum(date.month) + 1,
-                date.day,
+                @intFromEnum(date.day),
                 agenda.description,
             });
         }
@@ -69,10 +69,8 @@ fn list(db: *Sqlite3) !void {
 fn populate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
     const now = std.time.timestamp();
     const today = Date.fromTimestamp(now, my_timezone);
-    std.debug.print("Today is {any}\n", .{today});
 
     const last_run = try data.selectLastRunTimeMs(db);
-    std.debug.print("Last run: {any}\n", .{last_run});
 
     const check_date_start = if (last_run) |date|
         Date.fromTimestamp(date, .utc).nextDate()
@@ -81,10 +79,7 @@ fn populate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
 
     const check_date_end = today.addDays(60);
 
-    std.debug.print("Today check start: {any}\n", .{check_date_start});
-
     const rules_count = try data.countScheduler(db);
-    std.debug.print("Rules count: {any}\n", .{rules_count});
 
     var scheduler_list = try std.ArrayList(Scheduler).initCapacity(alloc, rules_count);
     defer {
@@ -105,27 +100,23 @@ fn populate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
     }
 
     // Loop through all dates
-    if (check_date_start.compare(check_date_end) == .gt) {
-        std.debug.print("We've already ran today!\n", .{});
-    } else {
-        var check_date = check_date_start;
-        while (check_date.compare(check_date_end) != .gt) : (check_date = check_date.nextDate()) {
-            const timestamp = check_date.toTimestamp();
-            for (scheduler_list.items) |scheduler| {
-                const match = scheduler.rule_parsed.matches(check_date);
-                if (match) {
-                    const exists = try data.existsAgenda(db, scheduler.id, timestamp);
-                    if (!exists) {
-                        // Generate an entry
-                        const agenda = AgendaInsert{
-                            .scheduler_id = scheduler.id,
-                            .description = scheduler.description,
-                            .tags_csv = scheduler.tags_csv,
-                            .monetary_value = scheduler.monetary_value,
-                            .due_at = timestamp,
-                        };
-                        try data.insertAgenda(db, agenda);
-                    }
+    var check_date = check_date_start;
+    while (check_date.compare(check_date_end) != .gt) : (check_date = check_date.nextDate()) {
+        const timestamp = check_date.toTimestamp();
+        for (scheduler_list.items) |scheduler| {
+            const match = scheduler.rule_parsed.matches(check_date);
+            if (match) {
+                const exists = try data.existsAgenda(db, scheduler.id, timestamp);
+                if (!exists) {
+                    // Generate an entry
+                    const agenda = AgendaInsert{
+                        .scheduler_id = scheduler.id,
+                        .description = scheduler.description,
+                        .tags_csv = scheduler.tags_csv,
+                        .monetary_value = scheduler.monetary_value,
+                        .due_at = timestamp,
+                    };
+                    try data.insertAgenda(db, agenda);
                 }
             }
         }
