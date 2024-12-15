@@ -167,7 +167,7 @@ pub fn fromTimestamp(timestamp_utc: i64, timezone: Timezone) Date {
     const year: Year = @enumFromInt(if (m <= 2) y + 1 else y);
     const month: Month = @enumFromInt(m - 1);
     const day: Day = @enumFromInt(d);
-    const week_day: WeekDay = @enumFromInt(@mod(z + 2, 7));
+    const week_day: WeekDay = @enumFromInt(@mod(z + 3, 7));
 
     return .{ .year = year, .month = month, .day = day, .week_day = week_day };
 }
@@ -177,7 +177,7 @@ test "fromTimestamp" {
 }
 
 inline fn hash(self: Date) i32 {
-    return (@as(i32, @intFromEnum(self.year)) * 11 +
+    return (@as(i32, @intFromEnum(self.year)) * 12 +
         @intFromEnum(self.month)) * 31 +
         @intFromEnum(self.day);
 }
@@ -191,6 +191,7 @@ test "compare" {
     try std.testing.expectEqual(.lt, Date.fromInts(2024, 1, 1, 2).compare(Date.fromInts(2024, 2, 1, 5)));
     try std.testing.expectEqual(.lt, Date.fromInts(2024, 1, 1, 2).compare(Date.fromInts(2024, 1, 2, 3)));
     try std.testing.expectEqual(.eq, Date.fromInts(2024, 1, 1, 2).compare(Date.fromInts(2024, 1, 1, 2)));
+    try std.testing.expectEqual(.lt, Date.fromInts(2024, 12, 31, 3).compare(Date.fromInts(2025, 1, 1, 4)));
 }
 
 pub fn nextDate(self: Date) Date {
@@ -249,17 +250,35 @@ pub fn addDays(self: Date, days: u32) Date {
 // https://howardhinnant.github.io/date_algorithms.html#days_from_civil
 pub fn toTimestamp(date: Date) i64 {
     var y = @as(i64, @intFromEnum(date.year));
-    const m = @as(i64, @intFromEnum(date.month));
+    const m = @as(i64, @intFromEnum(date.month)) + 1;
     const d = @as(i64, @intFromEnum(date.day));
-    if (m > 2) {
+    if (m <= 2) {
         y -= 1;
     }
     const era = @divTrunc(if (y >= 0) y else y - 399, 400);
-    const yoe = y - era * 400;
+    const yoe = @as(i64, @intCast(@abs(y - era * 400)));
     const doy = @divTrunc((153 * (if (m > 2) m - 3 else m + 9) + 2), 5) + d - 1;
     const doe = yoe * 365 + @divTrunc(yoe, 4) - @divTrunc(yoe, 100) + doy;
     const seconds_in_day = 24 * 60 * 60;
     return seconds_in_day * (era * 146097 + doe - 719468);
+}
+
+test "toTimestamp" {
+    const dates = [_]Date{
+        Date.fromInts(2024, 12, 15, 1),
+        Date.fromInts(2024, 12, 31, 3),
+        Date.fromInts(2025, 1, 1, 4),
+        Date.fromInts(2023, 12, 31, 1),
+        Date.fromInts(2024, 2, 29, 5),
+        Date.fromInts(2024, 2, 28, 4),
+        Date.fromInts(2025, 2, 28, 6),
+    };
+    for (dates) |date| {
+        const ts = date.toTimestamp();
+        const date_parsed = Date.fromTimestamp(ts, .utc);
+        errdefer std.debug.print("Date failed: {any}\n", .{date});
+        try std.testing.expectEqual(date, date_parsed);
+    }
 }
 
 fn isLeapYear(year: Year) bool {

@@ -1,17 +1,24 @@
+const Agenda = @import("Agenda.zig");
 const AgendaInsert = @import("AgendaInsert.zig");
 const embedMinifiedSql = @import("zsqlite-minify").embedMinifiedSql;
 const Scheduler = @import("Scheduler.zig");
 const std = @import("std");
 const zsqlite = @import("zsqlite");
 
-const SchedulerRuleStatement = zsqlite.StatementIteratorAlloc(
+const SchedulerIterator = zsqlite.StatementIteratorAlloc(
     Scheduler,
     std.fmt.ParseIntError || std.mem.Allocator.Error,
     Scheduler.init,
-    embedMinifiedSql("sqls/scheduler_select.sql"),
+    embedMinifiedSql("sqls/scheduler_list.sql"),
 );
 
-pub fn selectSchedulerRulesCount(db: *zsqlite.Sqlite3) !u64 {
+const AgendaIterator = zsqlite.StatementIterator(
+    Agenda,
+    Agenda.init,
+    embedMinifiedSql("sqls/agenda_list.sql"),
+);
+
+pub fn countScheduler(db: *zsqlite.Sqlite3) !u64 {
     const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_count.sql"));
     defer stmt.deinit();
     const opt_row = try stmt.step();
@@ -22,8 +29,8 @@ pub fn selectSchedulerRulesCount(db: *zsqlite.Sqlite3) !u64 {
     return 0;
 }
 
-pub fn selectSchedulerRules(db: *zsqlite.Sqlite3) !SchedulerRuleStatement {
-    return SchedulerRuleStatement.prepare(db);
+pub fn listScheduler(db: *zsqlite.Sqlite3) !SchedulerIterator {
+    return SchedulerIterator.prepare(db);
 }
 
 pub fn selectLastRunTimeMs(db: *zsqlite.Sqlite3) !?i64 {
@@ -61,4 +68,8 @@ pub fn insertAgenda(db: *zsqlite.Sqlite3, agenda: AgendaInsert) !void {
     try stmt.bind(4, agenda.monetary_value);
     try stmt.bind(5, agenda.due_at);
     try stmt.exec();
+}
+
+pub fn listAgenda(db: *zsqlite.Sqlite3) !AgendaIterator {
+    return AgendaIterator.prepare(db);
 }
