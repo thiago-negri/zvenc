@@ -42,6 +42,8 @@ pub fn main() !void {
     // - agenda rm <id>
     // - agenda edit <id> <due> <description> <tags> <monetary_value>
     // Default command runs the scheduler and list due entries
+    // Add a filter by tags for "list" commands, and also a "project" to extract only some fields
+    // This would allow to pipe the results into other CLIs
 }
 
 fn populateAndList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
