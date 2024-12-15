@@ -1,7 +1,7 @@
 const migrate = @import("zsqlite-migrate").migrate;
 const Sqlite3 = @import("zsqlite").Sqlite3;
 const std = @import("std");
-const zvenc = @import("./zvenc.zig");
+const zvenc = @import("zvenc.zig");
 
 const Gpa = std.heap.GeneralPurposeAllocator(.{});
 
@@ -43,33 +43,44 @@ pub fn main() !void {
     const rules_count = try zvenc.data.selectSchedulerRulesCount(&db);
     std.debug.print("Rules count: {any}\n", .{rules_count});
 
-    var rules_list = try std.ArrayList(zvenc.rule.Rule).initCapacity(alloc, rules_count);
+    var scheduler_list = try std.ArrayList(zvenc.Scheduler).initCapacity(alloc, rules_count);
     defer {
-        for (rules_list.items) |item| {
+        for (scheduler_list.items) |item| {
             item.deinit(alloc);
         }
-        rules_list.deinit();
+        scheduler_list.deinit();
     }
 
-    const iter = try zvenc.data.selectSchedulerRules(&db);
-    defer iter.deinit();
-
-    std.debug.print("Iter: {any}\n", .{iter});
-    while (try iter.next()) |row| {
-        std.debug.print("Row: {any}\n", .{row});
-        const rule = try zvenc.rule.Rule.parse(row.rule, alloc);
-        errdefer rule.deinit(alloc);
-        try rules_list.append(rule);
+    // Populate scheduler_list
+    {
+        const iter = try zvenc.data.selectSchedulerRules(&db);
+        defer iter.deinit();
+        while (try iter.next(alloc)) |row| {
+            errdefer row.deinit(alloc);
+            try scheduler_list.append(row);
+        }
     }
 
-    var check_date = check_date_start;
-    while (check_date.compare(check_date_end) != .gt) : (check_date = check_date.nextDate()) {
-        if (check_date_start.compare(check_date_end) == .gt) {
-            std.debug.print("we've already ran today!\n", .{});
-        } else {
-            for (rules_list.items) |rule| {
-                const match = rule.matches(check_date);
-                std.debug.print("Rule ${any} matches ${any}: ${any}\n", .{ rule, check_date, match });
+    // Loop through all dates
+    if (check_date_start.compare(check_date_end) == .gt) {
+        std.debug.print("We've already ran today!\n", .{});
+    } else {
+        var check_date = check_date_start;
+        while (check_date.compare(check_date_end) != .gt) : (check_date = check_date.nextDate()) {
+            const timestamp = check_date.toTimestamp();
+            for (scheduler_list.items) |scheduler| {
+                const match = scheduler.rule_parsed.matches(check_date);
+                if (match) {
+                    // Generate an entry
+                    const agenda = zvenc.AgendaInsert{
+                        .scheduler_id = scheduler.id,
+                        .description = scheduler.description,
+                        .tags_csv = scheduler.tags_csv,
+                        .monetary_value = scheduler.monetary_value,
+                        .due_at = timestamp,
+                    };
+                    try zvenc.data.insertAgenda(&db, agenda);
+                }
             }
         }
     }
