@@ -29,8 +29,19 @@ pub fn main() !void {
         return err;
     };
 
-    // TODO: Add argv processing to allow insert/update/dimiss/etc
     try populateAndList(&db, alloc);
+
+    // TODO: Add argv processing to allow insert/update/dimiss/etc
+    // Ideas for commands:
+    // - scheduler list
+    // - scheduler add <rule> <description> <tags> <monetary_value>
+    // - scheduler rm <id>
+    // - scheduler edit <id> <rule> <description> <tags> <monetary_value>
+    // - agenda list
+    // - agenda add <due> <description> <tags> <monetary_value>
+    // - agenda rm <id>
+    // - agenda edit <id> <due> <description> <tags> <monetary_value>
+    // Default command runs the scheduler and list due entries
 }
 
 fn populateAndList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
