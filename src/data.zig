@@ -43,6 +43,15 @@ pub fn updateLastRunTimeMs(db: *zsqlite.Sqlite3, timestamp: i64) !void {
     try stmt.exec();
 }
 
+pub fn existsAgenda(db: *zsqlite.Sqlite3, scheduler_id: i64, due_at: i64) !bool {
+    const stmt = try db.prepare(embedMinifiedSql("sqls/agenda_exists.sql"));
+    defer stmt.deinit();
+    try stmt.bind(1, scheduler_id);
+    try stmt.bind(2, due_at);
+    const row = try stmt.step();
+    return row != null;
+}
+
 pub fn insertAgenda(db: *zsqlite.Sqlite3, agenda: AgendaInsert) !void {
     const stmt = try db.prepare(embedMinifiedSql("sqls/agenda_insert.sql"));
     defer stmt.deinit();

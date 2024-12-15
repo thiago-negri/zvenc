@@ -64,8 +64,6 @@ pub fn main() !void {
         }
     }
 
-    // TODO: Allow reruns that do not overwrite agenda with matching scheduler_id and due_at
-    //
     // Loop through all dates
     if (check_date_start.compare(check_date_end) == .gt) {
         std.debug.print("We've already ran today!\n", .{});
@@ -76,15 +74,18 @@ pub fn main() !void {
             for (scheduler_list.items) |scheduler| {
                 const match = scheduler.rule_parsed.matches(check_date);
                 if (match) {
-                    // Generate an entry
-                    const agenda = AgendaInsert{
-                        .scheduler_id = scheduler.id,
-                        .description = scheduler.description,
-                        .tags_csv = scheduler.tags_csv,
-                        .monetary_value = scheduler.monetary_value,
-                        .due_at = timestamp,
-                    };
-                    try data.insertAgenda(&db, agenda);
+                    const exists = try data.existsAgenda(&db, scheduler.id, timestamp);
+                    if (!exists) {
+                        // Generate an entry
+                        const agenda = AgendaInsert{
+                            .scheduler_id = scheduler.id,
+                            .description = scheduler.description,
+                            .tags_csv = scheduler.tags_csv,
+                            .monetary_value = scheduler.monetary_value,
+                            .due_at = timestamp,
+                        };
+                        try data.insertAgenda(&db, agenda);
+                    }
                 }
             }
         }
