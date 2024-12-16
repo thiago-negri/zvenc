@@ -33,6 +33,31 @@ pub fn listScheduler(db: *zsqlite.Sqlite3) !SchedulerIterator {
     return SchedulerIterator.prepare(db);
 }
 
+pub fn deleteScheduler(db: *zsqlite.Sqlite3, scheduler_id: i64) !void {
+    const archived_at = std.time.timestamp();
+
+    // Insert the scheduler_archive row
+    const archive_stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_archive.sql"));
+    defer archive_stmt.deinit();
+    try archive_stmt.bind(1, archived_at);
+    try archive_stmt.bind(2, scheduler_id);
+    const row = try archive_stmt.step() orelse return error.NotFound;
+    const scheduler_archive_id = row.column(0, i64);
+
+    // Change all agenda entries to point to the archived scheduler
+    const agenda_update_stmt = try db.prepare(embedMinifiedSql("sqls/agenda_update_scheduler_archive.sql"));
+    defer agenda_update_stmt.deinit();
+    try agenda_update_stmt.bind(1, scheduler_archive_id);
+    try agenda_update_stmt.bind(2, scheduler_id);
+    try agenda_update_stmt.exec();
+
+    // Delete the scheduler row
+    const delete_stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_delete.sql"));
+    defer delete_stmt.deinit();
+    try delete_stmt.bind(1, scheduler_id);
+    try delete_stmt.exec();
+}
+
 pub fn selectLastRunTimeMs(db: *zsqlite.Sqlite3) !?i64 {
     const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_control_select.sql"));
     defer stmt.deinit();

@@ -50,17 +50,22 @@ pub fn main() !void {
             try schedulerList(&db, alloc);
             return;
         }
+        if (std.mem.eql(u8, sub_command, "rm")) {
+            // TODO: Handle not found errors
+            try schedulerDelete(&db, &args);
+            return;
+        }
     }
 
     // TODO: Add argv processing to allow insert/update/dimiss/etc
     // Ideas for commands:
     // - scheduler list (DONE)
+    // - scheduler rm <id> (DONE)
     // - scheduler add <rule> <description> <tags> <monetary_value>
-    // - scheduler rm <id>
     // - scheduler edit <id> <rule> <description> <tags> <monetary_value>
     // - agenda list
-    // - agenda add <due> <description> <tags> <monetary_value>
     // - agenda rm <id>
+    // - agenda add <due> <description> <tags> <monetary_value>
     // - agenda edit <id> <due> <description> <tags> <monetary_value>
     // Default command runs the scheduler and list due entries
     // Add a filter by tags for "list" commands, and also a "project" to extract only some fields
@@ -168,6 +173,12 @@ fn schedulerList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
         defer scheduler.deinit(alloc);
         std.debug.print("{d}: {s} ({s})\n", .{ scheduler.id, scheduler.description, scheduler.rule });
     }
+}
+
+fn schedulerDelete(db: *Sqlite3, args: *std.process.ArgIterator) !void {
+    const scheduler_id_raw = args.next() orelse return error.MissingSchedulerId;
+    const scheduler_id = try std.fmt.parseInt(i64, scheduler_id_raw, 10);
+    try data.deleteScheduler(db, scheduler_id);
 }
 
 // Make sure all migrations work fine on a fresh database
