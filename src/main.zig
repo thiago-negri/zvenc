@@ -29,11 +29,32 @@ pub fn main() !void {
         return err;
     };
 
-    try populateAndList(&db, alloc);
+    var args = try std.process.argsWithAllocator(alloc);
+    defer args.deinit();
+
+    // Skip executable name
+    _ = args.skip();
+
+    const command = args.next() orelse "run";
+
+    // Command: run
+    if (std.mem.eql(u8, command, "run")) {
+        try run(&db, alloc);
+        return;
+    }
+
+    // Command: scheduler
+    if (std.mem.eql(u8, command, "scheduler")) {
+        const sub_command = args.next() orelse "list";
+        if (std.mem.eql(u8, sub_command, "list")) {
+            try schedulerList(&db, alloc);
+            return;
+        }
+    }
 
     // TODO: Add argv processing to allow insert/update/dimiss/etc
     // Ideas for commands:
-    // - scheduler list
+    // - scheduler list (DONE)
     // - scheduler add <rule> <description> <tags> <monetary_value>
     // - scheduler rm <id>
     // - scheduler edit <id> <rule> <description> <tags> <monetary_value>
@@ -46,12 +67,12 @@ pub fn main() !void {
     // This would allow to pipe the results into other CLIs
 }
 
-fn populateAndList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
-    try populate(db, alloc);
-    try list(db);
+fn run(db: *Sqlite3, alloc: std.mem.Allocator) !void {
+    try schedulerPopulate(db, alloc);
+    try agendaListDue(db);
 }
 
-fn list(db: *Sqlite3) !void {
+fn agendaListDue(db: *Sqlite3) !void {
     const now = std.time.timestamp();
     const today = Date.fromTimestamp(now, .utc);
     std.debug.print("TODAY: {d}/{d}/{d} {any}\n", .{
@@ -79,7 +100,7 @@ fn list(db: *Sqlite3) !void {
 }
 
 /// Will loop over all Scheduler rows and generate Agenda entries for missing ones
-fn populate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
+fn schedulerPopulate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
     const now = std.time.timestamp();
     const today = Date.fromTimestamp(now, my_timezone);
 
@@ -137,6 +158,16 @@ fn populate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
 
     // Update last run
     try data.updateLastRunTimeMs(db, check_date_end.toTimestamp());
+}
+
+fn schedulerList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
+    const iter = try data.listScheduler(db);
+    defer iter.deinit();
+
+    while (try iter.next(alloc)) |scheduler| {
+        defer scheduler.deinit(alloc);
+        std.debug.print("{d}: {s} ({s})\n", .{ scheduler.id, scheduler.description, scheduler.rule });
+    }
 }
 
 // Make sure all migrations work fine on a fresh database
