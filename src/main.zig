@@ -1,10 +1,12 @@
+const std = @import("std");
+
+const migrate = @import("zsqlite-migrate").migrate;
+const Sqlite3 = @import("zsqlite").Sqlite3;
+
 const AgendaInsert = @import("AgendaInsert.zig");
 const data = @import("data.zig");
 const Date = @import("Date.zig");
-const migrate = @import("zsqlite-migrate").migrate;
 const Scheduler = @import("Scheduler.zig");
-const Sqlite3 = @import("zsqlite").Sqlite3;
-const std = @import("std");
 
 const Gpa = std.heap.GeneralPurposeAllocator(.{});
 
@@ -57,13 +59,23 @@ pub fn main() !void {
         }
     }
 
+    // Command: Agenda
+    if (std.mem.eql(u8, command, "agenda")) {
+        const sub_command = args.next() orelse "list";
+        if (std.mem.eql(u8, sub_command, "list")) {
+            try agendaList(&db);
+            return;
+        }
+    }
+
     // TODO: Add argv processing to allow insert/update/dimiss/etc
     // Ideas for commands:
     // - scheduler list (DONE)
     // - scheduler rm <id> (DONE)
+    // - agenda list (DONE)
+    // -
     // - scheduler add <rule> <description> <tags> <monetary_value>
     // - scheduler edit <id> <rule> <description> <tags> <monetary_value>
-    // - agenda list
     // - agenda rm <id>
     // - agenda add <due> <description> <tags> <monetary_value>
     // - agenda edit <id> <due> <description> <tags> <monetary_value>
@@ -163,6 +175,22 @@ fn schedulerPopulate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
 
     // Update last run
     try data.updateLastRunTimeMs(db, check_date_end.toTimestamp());
+}
+
+fn agendaList(db: *Sqlite3) !void {
+    const iter = try data.listAgenda(db);
+    defer iter.deinit();
+
+    while (try iter.next()) |agenda| {
+        const date = Date.fromTimestamp(agenda.due_at, .utc);
+        std.debug.print("{d}: {d}/{d}/{d} {s}\n", .{
+            agenda.id,
+            @intFromEnum(date.year),
+            @intFromEnum(date.month) + 1,
+            @intFromEnum(date.day),
+            agenda.description,
+        });
+    }
 }
 
 fn schedulerList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
