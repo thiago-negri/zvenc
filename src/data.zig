@@ -51,6 +51,13 @@ pub fn deleteScheduler(db: *zsqlite.Sqlite3, scheduler_id: i64) !void {
     try agenda_update_stmt.bind(2, scheduler_id);
     try agenda_update_stmt.exec();
 
+    // Change all archived agenda entries to point to the archived scheduler
+    const agenda_archive_update_stmt = try db.prepare(embedMinifiedSql("sqls/agenda_archive_update_scheduler_archive.sql"));
+    defer agenda_archive_update_stmt.deinit();
+    try agenda_archive_update_stmt.bind(1, scheduler_archive_id);
+    try agenda_archive_update_stmt.bind(2, scheduler_id);
+    try agenda_archive_update_stmt.exec();
+
     // Delete the scheduler row
     const delete_stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_delete.sql"));
     defer delete_stmt.deinit();
@@ -97,4 +104,21 @@ pub fn insertAgenda(db: *zsqlite.Sqlite3, agenda: AgendaInsert) !void {
 
 pub fn listAgenda(db: *zsqlite.Sqlite3) !AgendaIterator {
     return AgendaIterator.prepare(db);
+}
+
+pub fn deleteAgenda(db: *zsqlite.Sqlite3, agenda_id: i64) !void {
+    const archived_at = std.time.timestamp();
+
+    // Insert the agenda_archive row
+    const archive_stmt = try db.prepare(embedMinifiedSql("sqls/agenda_archive.sql"));
+    defer archive_stmt.deinit();
+    try archive_stmt.bind(1, archived_at);
+    try archive_stmt.bind(2, agenda_id);
+    try archive_stmt.exec();
+
+    // Delete the agenda row
+    const delete_stmt = try db.prepare(embedMinifiedSql("sqls/agenda_delete.sql"));
+    defer delete_stmt.deinit();
+    try delete_stmt.bind(1, agenda_id);
+    try delete_stmt.exec();
 }

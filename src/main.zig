@@ -66,6 +66,10 @@ pub fn main() !void {
             try agendaList(&db);
             return;
         }
+        if (std.mem.eql(u8, sub_command, "rm")) {
+            try agendaDelete(&db, &args);
+            return;
+        }
     }
 
     // TODO: Add argv processing to allow insert/update/dimiss/etc
@@ -73,10 +77,10 @@ pub fn main() !void {
     // - scheduler list (DONE)
     // - scheduler rm <id> (DONE)
     // - agenda list (DONE)
+    // - agenda rm <id> (DONE)
     // -
     // - scheduler add <rule> <description> <tags> <monetary_value>
     // - scheduler edit <id> <rule> <description> <tags> <monetary_value>
-    // - agenda rm <id>
     // - agenda add <due> <description> <tags> <monetary_value>
     // - agenda edit <id> <due> <description> <tags> <monetary_value>
     // Default command runs the scheduler and list due entries
@@ -191,6 +195,12 @@ fn agendaList(db: *Sqlite3) !void {
             agenda.description,
         });
     }
+}
+
+fn agendaDelete(db: *Sqlite3, args: *std.process.ArgIterator) !void {
+    const agenda_id_raw = args.next() orelse return error.MissingAgendaId;
+    const agenda_id = try std.fmt.parseInt(i64, agenda_id_raw, 10);
+    try data.deleteAgenda(db, agenda_id);
 }
 
 fn schedulerList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
