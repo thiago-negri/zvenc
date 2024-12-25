@@ -120,17 +120,19 @@ fn run(db: *Sqlite3, alloc: std.mem.Allocator) !void {
         @intFromEnum(today.day),
         today.week_day.toString(),
     });
+    const near_future_ref_date = today.addDays(7);
     const future_ref_date = today.addDays(15);
-    try agendaListDue(db, today, future_ref_date);
+    try agendaListDue(db, today, near_future_ref_date, future_ref_date);
 }
 
-fn agendaListDue(db: *Sqlite3, today: Date, future_ref_date: Date) !void {
+fn agendaListDue(db: *Sqlite3, today: Date, near_future_ref_date: Date, future_ref_date: Date) !void {
     const iter = try data.listAgenda(db);
     defer iter.deinit();
 
     while (try iter.next()) |agenda| {
         const date = Date.fromTimestamp(agenda.due_at, .utc);
         const compare_today = date.compare(today);
+        const compare_near_future = date.compare(near_future_ref_date);
         const compare_future = date.compare(future_ref_date);
         if (compare_today != .gt) {
             std.debug.print("\u{001b}[31mDue -- {d}/{d}/{d} {s}\u{001b}[0m\n", .{
@@ -139,8 +141,14 @@ fn agendaListDue(db: *Sqlite3, today: Date, future_ref_date: Date) !void {
                 @intFromEnum(date.day),
                 agenda.description,
             });
-        }
-        if (compare_future != .gt) {
+        } else if (compare_near_future != .gt) {
+            std.debug.print("\u{001b}[33mSoon -- {d}/{d}/{d} {s}\u{001b}[0m\n", .{
+                @intFromEnum(date.year),
+                @intFromEnum(date.month) + 1,
+                @intFromEnum(date.day),
+                agenda.description,
+            });
+        } else if (compare_future != .gt) {
             std.debug.print("\u{001b}[32mUpcoming -- {d}/{d}/{d} {s}\u{001b}[0m\n", .{
                 @intFromEnum(date.year),
                 @intFromEnum(date.month) + 1,
