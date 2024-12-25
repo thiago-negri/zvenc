@@ -105,7 +105,11 @@ pub fn existsAgenda(db: *zsqlite.Sqlite3, scheduler_id: i64, due_at: i64) !bool 
 pub fn insertAgenda(db: *zsqlite.Sqlite3, agenda: AgendaInsert) !void {
     const stmt = try db.prepare(embedMinifiedSql("sqls/agenda_insert.sql"));
     defer stmt.deinit();
-    try stmt.bind(1, agenda.scheduler_id);
+    if (agenda.scheduler_id) |scheduler_id| {
+        try stmt.bind(1, scheduler_id);
+    } else {
+        try stmt.bindNull(1);
+    }
     try stmt.bindText(2, agenda.description);
     try stmt.bindText(3, agenda.tags_csv);
     try stmt.bind(4, agenda.monetary_value);

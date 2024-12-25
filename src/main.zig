@@ -75,19 +75,21 @@ pub fn main() !void {
             try agendaDelete(&db, &args);
             return;
         }
+        if (std.mem.eql(u8, sub_command, "add")) {
+            try agendaAdd(&db, &args);
+            return;
+        }
     }
 
-    // TODO: Add argv processing to allow insert/update/dimiss/etc
-    //
     // Ideas for commands:
     // - scheduler list (DONE)
     // - scheduler rm <id> (DONE)
     // - agenda list (DONE)
     // - agenda rm <id> (DONE)
     // - scheduler add <rule> <description> <tags> <monetary_value> (DONE)
+    // - agenda add <due> <description> <tags> <monetary_value> (DONE)
     //
     // - scheduler edit <id> <rule> <description> <tags> <monetary_value>
-    // - agenda add <due> <description> <tags> <monetary_value>
     // - agenda edit <id> <due> <description> <tags> <monetary_value>
     //
     // Default command runs the scheduler and list due entries
@@ -211,6 +213,33 @@ fn agendaDelete(db: *Sqlite3, args: *std.process.ArgIterator) !void {
     const agenda_id_raw = args.next() orelse return error.MissingAgendaId;
     const agenda_id = try std.fmt.parseInt(i64, agenda_id_raw, 10);
     try data.deleteAgenda(db, agenda_id);
+}
+
+/// agenda add <due> <description> <tags> <monetary_value>
+fn agendaAdd(db: *Sqlite3, args: *std.process.ArgIterator) !void {
+    const due = args.next() orelse return error.MissingDue;
+    const description = args.next() orelse return error.MissingDescription;
+    const tags = args.next() orelse return error.MissingTags;
+    const monetary_value = try std.fmt.parseInt(i64, args.next() orelse return error.MissingMonetaryValue, 10);
+    const due_at = try parseTimestamp(due);
+    const agenda_insert = AgendaInsert{
+        .due_at = due_at,
+        .description = description,
+        .tags_csv = tags,
+        .monetary_value = monetary_value,
+        .scheduler_id = null,
+    };
+    try data.insertAgenda(db, agenda_insert);
+}
+
+/// Parse a date in format YYYY-MM-DD into a timestamp
+fn parseTimestamp(date: []const u8) !i64 {
+    if (date.len != 10 or date[4] != '-' or date[7] != '-') return error.IncorrectDateFormat;
+    const year = try std.fmt.parseInt(u14, date[0..4], 10);
+    const month = try std.fmt.parseInt(u4, date[5..7], 10);
+    const day = try std.fmt.parseInt(u5, date[8..10], 10);
+    const week_day = 1; // Week day is not relevant
+    return Date.fromInts(year, month, day, week_day).toTimestamp();
 }
 
 /// scheduler list
