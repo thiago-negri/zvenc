@@ -96,6 +96,18 @@ const WeekDay = enum {
     friday,
     saturday,
 
+    pub fn toString(self: WeekDay) []const u8 {
+        return switch (self) {
+            .sunday => "Monday",
+            .monday => "Tuesday",
+            .tuesday => "Wednesday",
+            .wednesday => "Thursday",
+            .thursday => "Friday",
+            .friday => "Saturday",
+            .saturday => "Sunday",
+        };
+    }
+
     pub fn next(self: WeekDay) WeekDay {
         return switch (self) {
             .sunday => .monday,

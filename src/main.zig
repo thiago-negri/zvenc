@@ -11,13 +11,20 @@ const SchedulerInsert = @import("SchedulerInsert.zig");
 
 const Gpa = std.heap.GeneralPurposeAllocator(.{});
 
-const db_filename = "zvenc.db";
 const my_timezone = .brazil;
 
 pub fn main() !void {
     var gpa = Gpa{};
     defer _ = gpa.deinit();
     const alloc = gpa.allocator();
+
+    var args = try std.process.argsWithAllocator(alloc);
+    defer args.deinit();
+
+    // Skip executable name
+    _ = args.skip();
+
+    const db_filename = args.next() orelse return error.MissingDbFilename;
 
     // Connect to database
     var db = Sqlite3.init(db_filename, .{ .alloc = alloc }) catch |err| {
@@ -32,16 +39,17 @@ pub fn main() !void {
         return err;
     };
 
-    var args = try std.process.argsWithAllocator(alloc);
-    defer args.deinit();
-
-    // Skip executable name
-    _ = args.skip();
-
     const command = args.next() orelse "run";
 
     // Command: run
     if (std.mem.eql(u8, command, "run")) {
+        try run(&db, alloc);
+        return;
+    }
+
+    // Command: recheck
+    if (std.mem.eql(u8, command, "recheck")) {
+        try data.resetLastRunTimeMs(&db);
         try run(&db, alloc);
         return;
     }
@@ -59,7 +67,8 @@ pub fn main() !void {
         }
         if (std.mem.eql(u8, sub_command, "add")) {
             try schedulerAdd(&db, &args);
-            // TODO: Rerun scheduler
+            try data.resetLastRunTimeMs(&db);
+            try run(&db, alloc);
             return;
         }
     }
@@ -77,11 +86,13 @@ pub fn main() !void {
         }
         if (std.mem.eql(u8, sub_command, "add")) {
             try agendaAdd(&db, &args);
+            try run(&db, alloc);
             return;
         }
     }
 
     // Ideas for commands:
+    // - recheck
     // - scheduler list (DONE)
     // - scheduler rm <id> (DONE)
     // - agenda list (DONE)
@@ -106,11 +117,11 @@ fn run(db: *Sqlite3, alloc: std.mem.Allocator) !void {
 fn agendaListDue(db: *Sqlite3) !void {
     const now = std.time.timestamp();
     const today = Date.fromTimestamp(now, .utc);
-    std.debug.print("TODAY: {d}/{d}/{d} {any}\n", .{
+    std.debug.print("TODAY: {d}/{d}/{d} {s}\n", .{
         @intFromEnum(today.year),
         @intFromEnum(today.month) + 1,
         @intFromEnum(today.day),
-        today.week_day,
+        today.week_day.toString(),
     });
 
     const iter = try data.listAgenda(db);

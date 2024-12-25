@@ -93,6 +93,12 @@ pub fn updateLastRunTimeMs(db: *zsqlite.Sqlite3, timestamp: i64) !void {
     try stmt.exec();
 }
 
+pub fn resetLastRunTimeMs(db: *zsqlite.Sqlite3) !void {
+    const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_control_reset.sql"));
+    defer stmt.deinit();
+    try stmt.exec();
+}
+
 pub fn existsAgenda(db: *zsqlite.Sqlite3, scheduler_id: i64, due_at: i64) !bool {
     const stmt = try db.prepare(embedMinifiedSql("sqls/agenda_exists.sql"));
     defer stmt.deinit();

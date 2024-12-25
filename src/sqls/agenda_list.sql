@@ -5,4 +5,5 @@ SELECT /* 0: */ id,
        /* 4: */ tags_csv,
        /* 5: */ monetary_value,
        /* 6: */ due_at
-    FROM agenda;
+    FROM agenda
+    ORDER BY due_at ASC;
