@@ -7,6 +7,7 @@ const AgendaInsert = @import("AgendaInsert.zig");
 const data = @import("data.zig");
 const Date = @import("Date.zig");
 const Scheduler = @import("Scheduler.zig");
+const SchedulerInsert = @import("SchedulerInsert.zig");
 
 const Gpa = std.heap.GeneralPurposeAllocator(.{});
 
@@ -53,8 +54,12 @@ pub fn main() !void {
             return;
         }
         if (std.mem.eql(u8, sub_command, "rm")) {
-            // TODO: Handle not found errors
             try schedulerDelete(&db, &args);
+            return;
+        }
+        if (std.mem.eql(u8, sub_command, "add")) {
+            try schedulerAdd(&db, &args);
+            // TODO: Rerun scheduler
             return;
         }
     }
@@ -73,21 +78,24 @@ pub fn main() !void {
     }
 
     // TODO: Add argv processing to allow insert/update/dimiss/etc
+    //
     // Ideas for commands:
     // - scheduler list (DONE)
     // - scheduler rm <id> (DONE)
     // - agenda list (DONE)
     // - agenda rm <id> (DONE)
-    // -
-    // - scheduler add <rule> <description> <tags> <monetary_value>
+    // - scheduler add <rule> <description> <tags> <monetary_value> (DONE)
+    //
     // - scheduler edit <id> <rule> <description> <tags> <monetary_value>
     // - agenda add <due> <description> <tags> <monetary_value>
     // - agenda edit <id> <due> <description> <tags> <monetary_value>
+    //
     // Default command runs the scheduler and list due entries
     // Add a filter by tags for "list" commands, and also a "project" to extract only some fields
     // This would allow to pipe the results into other CLIs
 }
 
+/// run
 fn run(db: *Sqlite3, alloc: std.mem.Allocator) !void {
     try schedulerPopulate(db, alloc);
     try agendaListDue(db);
@@ -181,6 +189,7 @@ fn schedulerPopulate(db: *Sqlite3, alloc: std.mem.Allocator) !void {
     try data.updateLastRunTimeMs(db, check_date_end.toTimestamp());
 }
 
+/// agenda list
 fn agendaList(db: *Sqlite3) !void {
     const iter = try data.listAgenda(db);
     defer iter.deinit();
@@ -197,12 +206,14 @@ fn agendaList(db: *Sqlite3) !void {
     }
 }
 
+/// agenda rm <id>
 fn agendaDelete(db: *Sqlite3, args: *std.process.ArgIterator) !void {
     const agenda_id_raw = args.next() orelse return error.MissingAgendaId;
     const agenda_id = try std.fmt.parseInt(i64, agenda_id_raw, 10);
     try data.deleteAgenda(db, agenda_id);
 }
 
+/// scheduler list
 fn schedulerList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
     const iter = try data.listScheduler(db);
     defer iter.deinit();
@@ -213,10 +224,26 @@ fn schedulerList(db: *Sqlite3, alloc: std.mem.Allocator) !void {
     }
 }
 
+/// scheduler rm <id>
 fn schedulerDelete(db: *Sqlite3, args: *std.process.ArgIterator) !void {
     const scheduler_id_raw = args.next() orelse return error.MissingSchedulerId;
     const scheduler_id = try std.fmt.parseInt(i64, scheduler_id_raw, 10);
     try data.deleteScheduler(db, scheduler_id);
+}
+
+/// scheduler add <rule> <description> <tags> <monetary_value>
+fn schedulerAdd(db: *Sqlite3, args: *std.process.ArgIterator) !void {
+    const rule = args.next() orelse return error.MissingRule;
+    const description = args.next() orelse return error.MissingDescription;
+    const tags = args.next() orelse return error.MissingTags;
+    const monetary_value = try std.fmt.parseInt(i64, args.next() orelse return error.MissingMonetaryValue, 10);
+    const scheduler_insert = SchedulerInsert{
+        .rule = rule,
+        .description = description,
+        .tags_csv = tags,
+        .monetary_value = monetary_value,
+    };
+    try data.insertScheduler(db, scheduler_insert);
 }
 
 // Make sure all migrations work fine on a fresh database

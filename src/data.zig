@@ -2,6 +2,7 @@ const Agenda = @import("Agenda.zig");
 const AgendaInsert = @import("AgendaInsert.zig");
 const embedMinifiedSql = @import("zsqlite-minify").embedMinifiedSql;
 const Scheduler = @import("Scheduler.zig");
+const SchedulerInsert = @import("SchedulerInsert.zig");
 const std = @import("std");
 const zsqlite = @import("zsqlite");
 
@@ -27,6 +28,16 @@ pub fn countScheduler(db: *zsqlite.Sqlite3) !u64 {
         return @intCast(count);
     }
     return 0;
+}
+
+pub fn insertScheduler(db: *zsqlite.Sqlite3, scheduler: SchedulerInsert) !void {
+    const stmt = try db.prepare(embedMinifiedSql("sqls/scheduler_insert.sql"));
+    defer stmt.deinit();
+    try stmt.bindText(1, scheduler.rule);
+    try stmt.bindText(2, scheduler.description);
+    try stmt.bindText(3, scheduler.tags_csv);
+    try stmt.bind(4, scheduler.monetary_value);
+    try stmt.exec();
 }
 
 pub fn listScheduler(db: *zsqlite.Sqlite3) !SchedulerIterator {
