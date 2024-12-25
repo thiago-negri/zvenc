@@ -135,24 +135,27 @@ fn agendaListDue(db: *Sqlite3, today: Date, near_future_ref_date: Date, future_r
         const compare_near_future = date.compare(near_future_ref_date);
         const compare_future = date.compare(future_ref_date);
         if (compare_today != .gt) {
-            std.debug.print("\u{001b}[31mDue -- {d}/{d}/{d} {s}\u{001b}[0m\n", .{
+            std.debug.print("\u{001b}[31mDue      -- {d}/{s}/{s}  {d: >4}   {s}\u{001b}[0m\n", .{
                 @intFromEnum(date.year),
-                @intFromEnum(date.month) + 1,
-                @intFromEnum(date.day),
+                std.fmt.digits2(@intFromEnum(date.month) + 1),
+                std.fmt.digits2(@intFromEnum(date.day)),
+                agenda.id,
                 agenda.description,
             });
         } else if (compare_near_future != .gt) {
-            std.debug.print("\u{001b}[33mSoon -- {d}/{d}/{d} {s}\u{001b}[0m\n", .{
+            std.debug.print("\u{001b}[33mSoon     -- {d}/{s}/{s}  {d: >4}   {s}\u{001b}[0m\n", .{
                 @intFromEnum(date.year),
-                @intFromEnum(date.month) + 1,
-                @intFromEnum(date.day),
+                std.fmt.digits2(@intFromEnum(date.month) + 1),
+                std.fmt.digits2(@intFromEnum(date.day)),
+                agenda.id,
                 agenda.description,
             });
         } else if (compare_future != .gt) {
-            std.debug.print("\u{001b}[32mUpcoming -- {d}/{d}/{d} {s}\u{001b}[0m\n", .{
+            std.debug.print("\u{001b}[32mUpcoming -- {d}/{s}/{s}  {d: >4}   {s}\u{001b}[0m\n", .{
                 @intFromEnum(date.year),
-                @intFromEnum(date.month) + 1,
-                @intFromEnum(date.day),
+                std.fmt.digits2(@intFromEnum(date.month) + 1),
+                std.fmt.digits2(@intFromEnum(date.day)),
+                agenda.id,
                 agenda.description,
             });
         }
