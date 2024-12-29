@@ -6,4 +6,8 @@ SELECT /* 0: */ id,
        /* 5: */ monetary_value,
        /* 6: */ due_at
     FROM agenda
-    ORDER BY due_at ASC;
+    -- DESC so the 'due' items show at the very bottom
+    -- when opening up a new shell session.
+    -- So even on small height terminals you'll see the
+    -- due items.
+    ORDER BY due_at DESC, id DESC;
