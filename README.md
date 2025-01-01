@@ -27,7 +27,12 @@ Now you'll get reminders whenever you open a terminal:
 ![screenshot-terminal](images/screenshot-terminal.png)
 
 
-TODO: Add docs on how to add scheduler rules and agenda entries.
+## TODOs
+
+- Add docs on how to add scheduler rules and agenda entries.
+- Add scheduler rule that can target "last workday of the month".
+- Add holidays that override workdays setting.
+- Add queries.
 
 
 ## Notes
